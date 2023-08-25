@@ -1,6 +1,6 @@
 
 ###
-### Calculate total brain volume for each scan by counting non-zero mask voxels. resolution 0.16 mm^3
+### Calculate total brain volume for each scan by counting non-zero mask voxels. Scan resolution 0.16 mm^3
 ###
 
 # libraries ---------------------------------------------------------------
@@ -13,10 +13,10 @@ library(janitor)
 
 base_dir <- "~/Documents/PhD/projects/CamRat/CamRat/"
 
-# calculate eTIV ----------------------------------------------------------
+# calculate TBV ----------------------------------------------------------
 
 df_tbv <- tibble()  
-studies <- c("JWD", "EDA")
+studies <- c("MRC", "GSK")
 sessions <- c("ses-PND020", "ses-PND035", "ses-PND063", "ses-PND300")
 
 for (study in studies) {
@@ -77,7 +77,6 @@ for (study in studies) {
     
   }
   
-  
 }
 
 df_tbv <- df_tbv %>%
@@ -88,5 +87,4 @@ df_tbv <- df_tbv %>%
          ) %>% 
   dplyr::select(subject, timepoint, tbv)
   
-save(df_tbv, file = paste0(base_dir, "objects/18July2023_df_tbv.RDS"))  
-    
+save(df_tbv, file = paste0(base_dir, "objects/25Aug2023_df_tbv.RDS"))  

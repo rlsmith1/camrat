@@ -1,4 +1,8 @@
 
+###
+### Pull together 3D ROI stats output from AFNI and add metadata
+###
+
 # libraries -------------------------------------------------------------------
 
 library(tidyverse)
@@ -7,8 +11,8 @@ library(janitor)
 # load external data -------------------------------------------------------------------
 
 base_dir <- "~/Documents/PhD/projects/CamRat/CamRat/"
-load(paste0(base_dir, "objects/18July2023_df_tbv.RDS")) # df_tbv (generated in calc_tbv_from_masks.R)
-load(paste0(base_dir, "objects/21June2023_sigma_labels.RDS")) # df_sigma_labels (generated in sigma_atlas.R)
+load(paste0(base_dir, "objects/25Aug2023_df_tbv.RDS")) # df_tbv (generated in calc_tbv_from_masks.R)
+load(paste0(base_dir, "objects/25Aug2023_sigma_labels.RDS")) # df_sigma_labels (generated in sigma_atlas.R)
 load(paste0(base_dir, "objects/ratdb_scans.Rdata")) # df_scans (generated in ratdb.R)
 
 df_eda_subject_info <- read_csv(paste0(base_dir, "data/subject_info.csv")) %>% 
@@ -16,7 +20,7 @@ df_eda_subject_info <- read_csv(paste0(base_dir, "data/subject_info.csv")) %>%
   clean_names %>% 
   dplyr::rename("sex" = "gender")
 
-# load MRI scan data -------------------------------------------------------------------
+# load MRI scan data (output from 3dROIstats) -------------------------------------------------------------------
 
 data_dir <- paste0(base_dir, "data/3d_ROI_stats/")
 data_files <- list.files(data_dir)
@@ -54,8 +58,8 @@ df_data_tmp <- map_dfr(
 df_data <- df_data_tmp %>% 
   
   # Add ROI information
-  left_join(df_sigma_labels, by = "idx") %>% 
-  dplyr::select(-idx, -original_atlas) %>% 
+  left_join(df_sigma_labels %>% mutate(idx = as.character(idx)), by = "idx") %>% 
+  dplyr::select(-idx) %>% 
   
   # add subject information
   mutate(study = ifelse(substr(subject, start = 1, stop = 3) == "JWD", "MRC", "GSK"),
@@ -88,5 +92,5 @@ df_data <- df_data_tmp %>%
   arrange(study, subject, timepoint, metric, region_of_interest)
 
 # SAVE
-save(df_data, file = paste0(base_dir, "objects/21July2023_df_data.RDS"))
+save(df_data, file = paste0(base_dir, "objects/25Aug2023_df_data.RDS"))
 
