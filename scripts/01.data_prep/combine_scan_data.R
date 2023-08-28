@@ -100,7 +100,7 @@ df_data <- df_data_tmp %>%
 # format & save -----------------------------------------------------------
 
 # LIST ROIS THAT DID NOT REGISTER WELL TO REMOVE FROM ANALYSIS
-bad_reg_rois <- c("spinal_cord", "brainstem", "cerebellum", "commissural_stria_terminalis", "central_canal")
+bad_reg_rois <- c("spinal_cord", "brainstem", "cerebell", "commissural_stria_terminalis", "central_canal")
 
 # REMOVE SCANS AND REGIONS THAT WERE NOT SUCCESSFULLY REGISTERED 
 df_data <- df_data %>% 
