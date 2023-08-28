@@ -15,10 +15,15 @@ load(paste0(base_dir, "objects/25Aug2023_df_tbv.RDS")) # df_tbv (generated in ca
 load(paste0(base_dir, "objects/25Aug2023_sigma_labels.RDS")) # df_sigma_labels (generated in sigma_atlas.R)
 load(paste0(base_dir, "objects/ratdb_scans.Rdata")) # df_scans (generated in ratdb.R)
 
+# subject metadata
 df_eda_subject_info <- read_csv(paste0(base_dir, "data/subject_info.csv")) %>% 
   na.omit() %>% 
   clean_names %>% 
   dplyr::rename("sex" = "gender")
+
+# info on if scan had gadolinium
+df_gad <- read_xlsx(paste0(base_dir, "data/gadolinium_use_records.xlsx")) %>% 
+  dplyr::select(subject, scan_date, gad_by_record)
 
 # load MRI scan data (output from 3dROIstats) -------------------------------------------------------------------
 
@@ -90,6 +95,29 @@ df_data <- df_data_tmp %>%
   dplyr::select(study, subject, timepoint, sex, group, age, scan_date, tbv, hemisphere, everything()) %>% 
   distinct() %>% 
   arrange(study, subject, timepoint, metric, region_of_interest)
+
+
+# format & save -----------------------------------------------------------
+
+# LIST ROIS THAT DID NOT REGISTER WELL TO REMOVE FROM ANALYSIS
+bad_reg_rois <- c("spinal_cord", "brainstem", "cerebellum", "commissural_stria_terminalis", "central_canal")
+
+# REMOVE SCANS AND REGIONS THAT WERE NOT SUCCESSFULLY REGISTERED 
+df_data <- df_data %>% 
+  
+  # remove subjects that didn't register well
+  filter(!(subject == "EDAA32" & timepoint == 300) &
+           !(subject == "EDAA46" & timepoint == 63)) %>% 
+  
+  # remove regions that didn't register well
+  filter(!str_detect(region_of_interest, paste0(bad_reg_rois, collapse = "|"))) %>% 
+  
+  # remove scans with gadolinium stain
+  anti_join(df_gad %>% filter(gad_by_record == 1), 
+            by = join_by(subject, scan_date)) %>% 
+  
+  # make timepoint a factor variable
+  mutate(timepoint = factor(timepoint, levels = c(20, 35, 63, 300)))
 
 # SAVE
 save(df_data, file = paste0(base_dir, "objects/25Aug2023_df_data.RDS"))
