@@ -1,4 +1,8 @@
 
+###
+### Run analysis and generate figures for Fig 1: Regional MT development in the developmental cohort
+###
+
 # libraries ---------------------------------------------------------------
 
 library(tidyverse)
