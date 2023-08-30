@@ -18,13 +18,13 @@ library(tidytext)
 # set plot theme ----------------------------------------------------------
 
 theme_set(theme_light() +
-            theme(plot.title = element_text(size = 14),
-                  axis.title = element_text(size = 12),
-                  axis.text = element_text(size = 12),
-                  strip.text = element_text(size = 12, color = "black"),
+            theme(plot.title = element_text(size = 10),
+                  axis.title = element_text(size = 10),
+                  axis.text = element_text(size = 10),
+                  strip.text = element_text(size = 10, color = "black"),
                   strip.background = element_rect(fill = "white", color = "gray"),
-                  legend.title = element_text(size = 12),
-                  legend.text = element_text(size = 12)
+                  legend.title = element_text(size = 8),
+                  legend.text = element_text(size = 8)
                   #legend.key.width = unit(2, "cm")
             )
 )
@@ -162,6 +162,15 @@ load(paste0(base_dir, "objects/25Aug2023_sigma_atlas_for_plotting.RDS")) # df_si
 
 # LIST ROIS THAT DID NOT REGISTER WELL TO REMOVE FROM ANALYSIS
 bad_reg_rois <- c("spinal_cord", "brainstem", "cerebell", "commissural_stria_terminalis", "central_canal")
+
+# LIST GRAY VS WHITE MATTER REGIONS
+gray_matter_rois <- df_sigma_labels %>% 
+  filter(matter == "grey_matter") %>% 
+  pull(region_of_interest)
+
+white_matter_rois <- df_sigma_labels %>% 
+  filter(matter == "white_matter") %>% 
+  pull(region_of_interest)
 
 # CONVERT ROI TO SYSTEM LEVEL
 df_sys_to_roi <- df_sigma_labels %>% 
@@ -433,69 +442,93 @@ p_fig1a <- df_slices %>%
         legend.key.height = unit(0.25, "cm")
   )
 
+p_fig1a
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/2a.MT_brain_maps.pdf"), width = 5, height = 4)
+ggsave(paste0(base_dir, "outputs/figures/2a.MT_brain_maps.png"), width = 5, height = 4)
+
 # B: Overall MT decay ------------------------------------------------------------
 
-p_fig1b <- df_mt_mrc %>% 
+df_fig1b <- df_mt_mrc %>% 
   group_by(timepoint) %>% 
   mutate(median_feaure_resids = median(feature_resids),
          median_age = median(age)) %>% 
-  filter(timepoint != 35) %>% 
+  filter(timepoint != 35)
+
+p_fig1b <- ggplot() +
   
-  ggplot() +
-  geom_point(aes(x = age, y = feature_resids), size = 2, shape = 1) +
-  geom_point(aes(x = median_age, y = median_feaure_resids), size = 3, color = "red") +
-  geom_line(aes(x = median_age, y = median_feaure_resids), linewidth = 2, color = "red", lty = 2) +
+  geom_point(data = df_fig1b,
+             mapping = aes(x = age, y = feature_resids), 
+             size = 2, shape = 1) +
+  
+  # late development
+  geom_point(data = df_fig1b %>% filter(timepoint == 300),
+             mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
+             size = 3, color = "gray") +
+  geom_line(data = df_fig1b %>% filter(timepoint %in% c(63, 300)),
+            mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
+            linewidth = 2, lty = 2, color = "gray") +
+  
+  # early development
+  geom_point(data = df_fig1b %>% filter(timepoint %in% c(20, 63)),
+             mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
+             size = 3, color = "salmon") +
+  geom_line(data = df_fig1b %>% filter(timepoint %in% c(20, 63)),
+            mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
+            linewidth = 2, lty = 2, color = "salmon") +
+  
+  # plot format
   labs(x = "age (PND)", y = "Regional MT (corrected for TBV)",
-       title = "MT across ROIs and subjects \n(red shows overall median)") +
+       title = "MT across ROIs and subjects") +
   theme(legend.position = "none")
 
-# C: ROI-specific MT decay in early development ------------------------------------------------------------
+p_fig1b
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/2b.MT_decay_overall.pdf"), width = 5, height = 4)
+ggsave(paste0(base_dir, "outputs/figures/2b.MT_decay_overall.png"), width = 5, height = 4)
+
+# C: Gray matter ROI-specific MT decay in early development ------------------------------------------------------------
 
 # PLOT SLOPES AND ERRORS
-p_fig1c_slopes <- df_confint_roi %>% 
+p_fig1c <- df_confint_roi %>% 
   left_join(df_sys_to_roi) %>% 
+  filter(region_of_interest %in% gray_matter_rois) %>% 
   group_by(system) %>% 
   summarise(slope = median(slope),
             standard_error = median(standard_error)
   ) %>% 
-    mutate(system = str_replace_all(system, "_", "\n")) %>% 
-
+  mutate(system = str_replace(system, "_", " "),
+         system = str_replace(system, "_", "\n")
+  ) %>% 
+  
   ggplot(aes(x = reorder(system, -slope), y = slope)) +
   geom_errorbar(aes(ymin = slope - standard_error, ymax = slope + standard_error)) +
-  geom_point(aes(alpha = abs(slope)), color = "forestgreen", size = 3) +
+  geom_point(aes(alpha = abs(slope)), color = "salmon", size = 3) +
   scale_alpha_continuous(range = c(0.3, 1)) +
   ylim(c(-0.015, 0)) +
   labs(x = "", y = "PND 20 --> 63 slope (+/- standard error)",
-       title = "Rate of early developmental MT decay in each brain system") +
+       title = "Rate of early developmental MT decay in \ngray matter brain systems") +
   coord_flip() +
   theme(legend.position = "none"#,
         #axis.text.y = element_text(size = 11)
   )
 
-# MATRIX OF SLOPE DIFFERENCES
-p_fig1c_pvals <- df_confint_sys_pvals %>%   
-  mutate(S1 = factor(str_replace_all(S1, "_", "\n"), levels = rev(str_replace_all(sys_order, "_", "\n"))),
-         S2 = factor(str_replace_all(S2, "_", "\n"), levels = rev(str_replace_all(sys_order, "_", "\n"))),
-         significant = p_adj < 0.05
-  ) %>% 
-  
-  ggplot(aes(x = S2, y = S1)) +
-  geom_tile(aes(fill = -log10(p_adj), color = significant), linewidth = 1) +
-  scale_color_manual(values = c("white", "black"), guide = "none") +
-  scale_fill_gradient(low = "white", high = "red") +
-  labs(x = "", y = "") +
-  theme_void() +
-  theme(axis.text.y = element_blank(),
-        axis.text.x = element_text(size = 12, angle = 90, hjust = 1, vjust = 0.5),
-        legend.position = "top",
-        legend.justification = "right"
-  )
+p_fig1c
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/2c.ROI_MT_decay.pdf"), width = 5, height = 6)
+ggsave(paste0(base_dir, "outputs/figures/2c.ROI_MT_decay.png"), width = 5, height = 6)
 
 
 # D: Relationship between early developmental MT decay and anatomical position ----------------------------
 
 # PLOT SLOPES ON BRAINS
-slices <- list("sagittal" = 125, "coronal" = 150)
+slices <- list("sagittal" = 125, 
+               "axial" = 115,
+               "coronal" = 150
+)
 df_slices <- map_dfr(.x = 1:length(slices),
                      .f = ~ df_sigma_atlas %>%
                        filter(region_of_interest != "striatum") %>% 
@@ -508,19 +541,20 @@ df_slices <- map_dfr(.x = 1:length(slices),
 p_fig1d_brain <- df_slices %>% 
   left_join(df_confint_roi, 
             by = "region_of_interest") %>% 
-  filter(region_of_interest != "central_canal") %>% 
-
+  mutate(slope = ifelse(region_of_interest %in% white_matter_rois, NA, slope)) %>% 
+  arrange(!is.na(slope)) %>% 
+  
   ggplot() +
   geom_sf(aes(color = slope, fill = slope, geometry = geometry, group = -1)) +
-  scale_fill_gradient(low = "forestgreen", high = "white", na.value = "grey") +
-  scale_color_gradient(low = "forestgreen", high = "white", na.value = "grey") +
+  scale_fill_gradient(low = "salmon", high = "white", na.value = "grey") +
+  scale_color_gradient(low = "salmon", high = "white", na.value = "grey") +
   facet_wrap(vars(side), nrow = 1) +
   #labs(title = "Rate of early developmental MT decay across regions") +
   theme_void() +
   theme(strip.text = element_blank(),
-        legend.title = element_text(size = 10),
-        legend.text = element_text(size = 10),
-        legend.key.width = unit(2, "cm"),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 8),
+        legend.key.width = unit(1.5, "cm"),
         legend.key.height = unit(0.25, "cm"),
         legend.position = "bottom"
   )
@@ -529,14 +563,14 @@ p_fig1d_brain <- df_slices %>%
 labels <- c("x (left --> right)", "y (posterior --> anterior)", "z (inferior --> superior)")
 names(labels) <- c("x", "y", "z")
 
-p_fig1d_xyz <- df_centroids %>% 
+p_fig1d_coords <- df_centroids %>% 
   pivot_longer(2:ncol(.), names_to = "dim", values_to = "coord") %>% 
   left_join(df_confint_sys, by = join_by(system)) %>%
   
   ggplot(aes(x = coord, y = slope)) +
-  geom_point(aes(alpha = abs(slope)), size = 3, color = "forestgreen") +
-  geom_smooth(method = "lm", se = FALSE, lty = 2) +
-  stat_cor(color = "blue") +
+  geom_point(aes(alpha = abs(slope)), size = 2, color = "salmon") +
+  geom_smooth(method = "lm", color = "black", se = FALSE, lty = 2) +
+  stat_cor(color = "black", size = 3) +
   #geom_text_repel(aes(label = system)) +
   facet_wrap(vars(dim), scales = "free_x", labeller = as_labeller(labels)) +
   scale_alpha_continuous(range = c(0.3, 1)) +
@@ -545,6 +579,12 @@ p_fig1d_xyz <- df_centroids %>%
        title = "System-level MT decay slope relative to anatomical position (RH)") +
   theme(legend.position = "none")
 
+p_fig1d_brain / p_fig1d_coords +
+  plot_annotation(title = "Anatomical patterning of MT decay in gray matter regions")
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/2d.anat_MT_decay.pdf"), width = 6, height = 4)
+ggsave(paste0(base_dir, "outputs/figures/2d.anat_MT_decay.png"), width = 6, height = 4)
 
 # layout + patch ------------------------------------------------------------
 
@@ -578,26 +618,6 @@ p_fig1a +
                   theme = theme(plot.title = element_text(size = 20, face = "bold")),
                   tag_levels =  "A")  &
   theme(plot.tag = element_text(face = 'bold', size = 16))
-
-# Patchwork taking too long to render... save each subpanel row separately
-p_fig1a + p_fig1b +
-  plot_layout(widths = c(2, 1)) +
-  plot_annotation(tag_levels = list(c("A", "B"))) &
-  theme(plot.tag = element_text(face = 'bold', size = 16))
-ggsave(paste0(base_dir, "outputs/figures/1.1a_b.pdf"), width = 10, height = 4)
-ggsave(paste0(base_dir, "outputs/figures/1.1a_b.png"), width = 10, height = 4)
-
-p_fig1c_slopes + (p_fig1c_pvals + plot_layout(tag_level = "new")) +
-  plot_layout(widths = c(1, 2)) +
-  plot_annotation(tag_levels = list(c("C"))) &
-  theme(plot.tag = element_text(face = 'bold', size = 16))
-ggsave(paste0(base_dir, "outputs/figures/1.1c.pdf"), width = 14, height = 12)
-ggsave(paste0(base_dir, "outputs/figures/1.1c.png"), width = 14, height = 12)
-
-p_fig1d_brain / (p_fig1d_xyz + plot_layout(tag_level = "new"))
-ggsave(paste0(base_dir, "outputs/figures/1.1c_inset.pdf"), width = 8, height = 6)
-ggsave(paste0(base_dir, "outputs/figures/1.1c_inset.png"), width = 8, height = 6)
-
 
 # supplement analysis -----------------------------------------------------
 
@@ -634,28 +654,50 @@ df_confint_roi_sup <- df_confint_roi_sup %>% arrange(slope)
 
 # S1 MT decay without TBV correction
 
-# A
-p_figS1a <- df_mt_mrc %>% 
+df_figS1a <- df_mt_mrc %>% 
   group_by(timepoint) %>% 
   mutate(median_mt = median(mt),
          median_age = median(age)) %>% 
-  filter(timepoint != 35) %>% 
+  filter(timepoint != 35)
+
+# A
+p_figS1a <- ggplot() +
   
-  ggplot() +
-  geom_point(aes(x = age, y = mt), size = 2, shape = 1) +
-  geom_point(aes(x = median_age, y = median_mt), size = 3, color = "red") +
-  geom_line(aes(x = median_age, y = median_mt), linewidth = 2, color = "red", lty = 2) +
-  labs(x = "age (PND)", y = "Regional MT (*not* corrected for TBV)",
-       title = "MT across ROIs and subjects \n(red shows overall median)") +
+  geom_point(data = df_figS1a,
+             mapping = aes(x = age, y = mt), 
+             size = 2, shape = 1) +
+  
+  # late development
+  geom_point(data = df_figS1a %>% filter(timepoint == 300),
+             mapping = aes(x = median_age, y = median_mt, color = period), 
+             size = 3, color = "gray") +
+  geom_line(data = df_figS1a %>% filter(timepoint %in% c(63, 300)),
+            mapping = aes(x = median_age, y = median_mt, color = period), 
+            linewidth = 2, lty = 2, color = "gray") +
+  
+  # early development
+  geom_point(data = df_figS1a %>% filter(timepoint %in% c(20, 63)),
+             mapping = aes(x = median_age, y = median_mt, color = period), 
+             size = 3, color = "salmon") +
+  geom_line(data = df_figS1a %>% filter(timepoint %in% c(20, 63)),
+            mapping = aes(x = median_age, y = median_mt, color = period), 
+            linewidth = 2, lty = 2, color = "salmon") +
+  
+  # plot format
+  labs(x = "age (PND)", y = "Regional MT (not corrected for TBV)",
+       title = "MT across ROIs and subjects") +
   theme(legend.position = "none")
 
 p_figS1a
-ggsave(paste0(base_dir, "outputs/figures/S1a.pdf"), width = 8, height = 6)
-ggsave(paste0(base_dir, "outputs/figures/S1a.png"), width = 8, height = 6)
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/S1a.uncorrected_MT_decay.pdf"), width = 5, height = 4)
+ggsave(paste0(base_dir, "outputs/figures/S1a.uncorrected_MT_decay.png"), width = 5, height = 4)
 
 # B slopes
-p_figS1b <- df_confint_roi %>% 
+p_figS1b <- df_confint_roi_sup %>% 
   left_join(df_sys_to_roi %>% filter(!str_detect(region_of_interest, paste0(bad_reg_rois, collapse = "|")))) %>% 
+  filter(region_of_interest %in% gray_matter_rois) %>% 
   group_by(system) %>% 
   summarise(slope = median(slope),
             standard_error = median(standard_error),
@@ -664,8 +706,8 @@ p_figS1b <- df_confint_roi %>%
   
   ggplot(aes(x = reorder(str_wrap(system, 35), -slope), y = slope)) +
   geom_errorbar(aes(ymin = slope - standard_error, ymax = slope + standard_error)) +
-  geom_point(aes(alpha = abs(slope)), color = "forestgreen", size = 3) +
-  scale_alpha_continuous(range = c(0.3, 1)) +
+  geom_point(aes(color = abs(slope)), size = 3) +
+  scale_color_gradient(low = "white", high = "salmon", limits = c(0, min(df_confint_roi_sup$slope) %>% )) +
   ylim(c(-0.015, 0)) +
   labs(x = "", y = "PND 20 --> 63 slope (+/- standard error)",
        title = "Rate of early developmental MT decay in each brain system \n(no TBV correction)") +
@@ -675,32 +717,39 @@ p_figS1b <- df_confint_roi %>%
   )
 
 p_figS1b
-ggsave(paste0(base_dir, "outputs/figures/S1b.pdf"), width = 6, height = 8)
-ggsave(paste0(base_dir, "outputs/figures/S1b.png"), width = 6, height = 8)
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/S1b.uncorrected_MT_slopes.pdf"), width = 5, height = 6)
+ggsave(paste0(base_dir, "outputs/figures/S1b.uncorrected_MT_slopes.png"), width = 5, height = 6)
 
 # S2 MT decay (with TBV correction) split by white vs gray matter
-n_sys <- df_sys_to_roi %>% dplyr::select(matter, system) %>% distinct %>% count(matter) %>% filter(matter != "csf") %>% pull(n)
 
-df_confint_roi %>% 
+p_figS1c <- df_confint_roi %>% 
   left_join(df_sys_to_roi %>% filter(!str_detect(region_of_interest, paste0(bad_reg_rois, collapse = "|")))) %>% 
   group_by(matter, system) %>% 
   summarise(slope = median(slope),
             standard_error = median(standard_error)
   ) %>% 
+  filter(matter == "white_matter") %>% 
+  mutate(system = str_replace_all(system, "_", " "),
+         matter = str_replace_all(matter, "_", " ")
+  ) %>% 
   
   ggplot(aes(x = reorder_within(str_wrap(system, 35), -slope, matter), y = slope)) +
   geom_errorbar(aes(ymin = slope - standard_error, ymax = slope + standard_error)) +
-  geom_point(aes(alpha = abs(slope)), color = "forestgreen", size = 3) +
-  facet_wrap(~ matter, scales = "free_y", ncol = 1) +
-  force_panelsizes(rows = c(n_sys[1], n_sys[2])) +
-  scale_alpha_continuous(range = c(0.3, 1)) +
+  geom_point(aes(color = abs(slope)), size = 3) +
+  scale_color_gradient(low = "white", high = "salmon", limits = c(0, min(df_confint_roi_sup$slope) %>% abs() )) +
   scale_x_reordered() +
   ylim(c(-0.015, 0)) +
   labs(x = "", y = "PND 20 --> 63 slope (+/- standard error)",
-       title = "Rate of early developmental MT decay in each brain system") +
+       title = "Rate of early developmental MT decay in white matter regions") +
   coord_flip() +
   theme(legend.position = "none"#,
         #axis.text.y = element_text(size = 11)
   )
-ggsave(paste0(base_dir, "outputs/figures/S2.pdf"), width = 6, height = 8)
-ggsave(paste0(base_dir, "outputs/figures/S2.png"), width = 6, height = 8)
+
+p_figS1c
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/S1c.WM_MT_decay.pdf"), width = 6, height = 4)
+ggsave(paste0(base_dir, "outputs/figures/S2c.WM_MT_decay.png"), width = 6, height = 4)

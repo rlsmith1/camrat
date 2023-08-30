@@ -12,13 +12,13 @@ library(tidytext)
 # set plot theme ----------------------------------------------------------
 
 theme_set(theme_light() +
-            theme(plot.title = element_text(size = 14),
-                  axis.title = element_text(size = 14),
-                  axis.text = element_text(size = 14),
-                  strip.text = element_text(size = 14, color = "black"),
+            theme(plot.title = element_text(size = 10),
+                  axis.title = element_text(size = 10),
+                  axis.text = element_text(size = 10),
+                  strip.text = element_text(size = 10, color = "black"),
                   strip.background = element_rect(fill = "white", color = "gray"),
-                  legend.title = element_text(size = 14),
-                  legend.text = element_text(size = 14)
+                  legend.title = element_text(size = 8),
+                  legend.text = element_text(size = 8)
                   #legend.key.width = unit(2, "cm")
             )
 )
@@ -32,7 +32,6 @@ base_dir <- "~/Documents/PhD/projects/CamRat/CamRat/"
 
 load(paste0(base_dir, "objects/25Aug2023_df_data.RDS")) # df_data
 
-
 # table of n --------------------------------------------------------------
 
 df_data %>% 
@@ -42,7 +41,6 @@ df_data %>%
   
   write.csv(paste0(base_dir, "outputs/tables/28Aug2023_table_of_n.csv"), 
             row.names = FALSE)
-
 
 # figure ------------------------------------------------------------------
 
@@ -57,7 +55,7 @@ df_data %>%
   mutate(subject = factor(subject, levels = unique(.$subject))) %>% 
   
   ggplot(aes(x = age, y = subject, color = group)) +
-  geom_point(size = 2) +
+  geom_point(size = 1) +
   geom_line(aes(group = subject), lty = 2, alpha = 0.5) +
   scale_color_manual(values = group_cols) +
   scale_x_continuous(breaks = c(20, 35, 63, 230, 290)) +
@@ -67,7 +65,7 @@ df_data %>%
         legend.position = "bottom"
   )
 
-ggsave(paste0(base_dir, "outputs/figures/0.0.sample_size.pdf"),
-       height = 8, width = 6)
-ggsave(paste0(base_dir, "outputs/figures/0.0.sample_size.png"),
-       height = 8, width = 6)
+ggsave(paste0(base_dir, "outputs/figures/1a.sample_size.pdf"),
+       height = 4.5, width = 3)
+ggsave(paste0(base_dir, "outputs/figures/1a.sample_size.png"),
+       height = 4.5, width = 3)
