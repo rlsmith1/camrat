@@ -169,7 +169,8 @@ df_mind_mods %>%
   group_by(module) %>% 
   mutate(row = row_number()) %>% 
   pivot_wider(id_cols = row, names_from = module, values_from = region_of_interest) %>% 
-  View()
+  dplyr::select(-row) #%>% 
+  write.csv(paste0(base_dir, "outputs/tables/control_adult_GM_CMN_5mods.csv"), row.names = FALSE)
 
 ### ESTABLISH MODULE LINES FOR NETWORK PLOTS
 module_lines <- df_mind_mods %>% 
