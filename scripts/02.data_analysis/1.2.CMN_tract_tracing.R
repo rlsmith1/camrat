@@ -43,7 +43,7 @@ base_dir <- "~/Documents/PhD/projects/CamRat/CamRat/"
 load(paste0(base_dir, "objects/25Aug2023_df_data.RDS")) # df_data
 load(paste0(base_dir, "objects/25Aug2023_sigma_labels.RDS")) # df_sigma_labels
 load(paste0(base_dir, "objects/25Aug2023_sigma_atlas_for_plotting.RDS")) # df_sigma_atlas
-load(paste0(base_dir, "objects/25Aug2023_df_mind.RDS")) # df_mind
+load(paste0(base_dir, "objects/29Aug2023_df_mind_GM.RDS")) # df_mind_GM
 
 # CONVERT ROI TO SYSTEM LEVEL
 df_sys_to_roi <- df_sigma_labels %>% 
