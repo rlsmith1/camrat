@@ -10,12 +10,12 @@ load(paste0(base_dir, "objects/25Aug2023_df_data.RDS")) # df_data, generated in 
 sessions <- c("ses-PND020", "ses-PND035", "ses-PND063", "ses-PND300")
 studies <- c("MRC", "GSK")
 
-df_mind <- tibble()
+df_mind_GM <- tibble()
 
 for (study in studies) {
   
   print(study)
-  study_dir <- paste0(base_dir, "data/MIND_files/", study, "/ROI/")
+  study_dir <- paste0(base_dir, "data/MIND_files/", study, "_GM/ROI/")
   
   for (ses in sessions) {
     
@@ -30,12 +30,13 @@ for (study in studies) {
         pivot_longer(2:ncol(.),
                      names_to = "R2",
                      values_to = "weight") %>% 
-        mutate(subject = sub, 
+        mutate(study = study,
+               subject = sub, 
                timepoint = ses,
                weight = as.numeric(weight), 
                .before = 1)
       
-      df_mind <- df_mind %>% bind_rows(df_tmp)
+      df_mind_GM <- df_mind_GM %>% bind_rows(df_tmp)
       
     }
     
@@ -44,7 +45,7 @@ for (study in studies) {
 }
 
 ### FORMAT
-df_mind <- df_mind %>% 
+df_mind_GM <- df_mind_GM %>% 
   mutate(subject = str_remove(subject, "sub-"),
          timepoint = str_remove(timepoint, "ses-PND") %>% 
            as.numeric %>% 
@@ -58,13 +59,11 @@ df_mind <- df_mind %>%
             by = c("subject", "timepoint")) %>% 
 
   # finalize formatting
-  filter(!(R1 == "commissural_stria_terminalis" | R2 == "commissural_stria_terminalis")) %>% 
   dplyr::select(subject, timepoint, sex, group, scan_date, age, tbv, everything())  %>% 
-  mutate(study = ifelse(substr(subject, start = 1, stop = 3) == "JWD", "MRC", "GSK"), .before = 1) %>% 
   mutate(group = ifelse(is.na(group), "control", group),
          sex = ifelse(study == "MRC", "Male", sex) 
   )
 
 ### SAVE
-save(df_mind, file = paste0(base_dir, "objects/25Aug2023_df_mind.RDS")) # df_mind
+save(df_mind_GM, file = paste0(base_dir, "objects/29Aug2023_df_mind_GM.RDS")) # df_mind_GM
 
