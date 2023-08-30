@@ -505,8 +505,8 @@ p_fig2c <- df_confint_roi %>%
   
   ggplot(aes(x = reorder(system, -slope), y = slope)) +
   geom_errorbar(aes(ymin = slope - standard_error, ymax = slope + standard_error)) +
-  geom_point(aes(alpha = abs(slope)), color = "salmon", size = 3) +
-  scale_alpha_continuous(range = c(0.3, 1)) +
+  geom_point(aes(color = abs(slope)), size = 3) +
+  scale_color_gradient(low = "white", high = "salmon", limits = c(0, min(df_confint_roi$slope) %>% abs())) +
   ylim(c(-0.015, 0)) +
   labs(x = "", y = "PND 20 --> 63 slope (+/- standard error)",
        title = "Rate of early developmental MT decay in \ngray matter brain systems") +
@@ -518,8 +518,8 @@ p_fig2c <- df_confint_roi %>%
 p_fig2c
 
 # SAVE
-ggsave(paste0(base_dir, "outputs/figures/2c.ROI_MT_decay.pdf"), width = 5, height = 6)
-ggsave(paste0(base_dir, "outputs/figures/2c.ROI_MT_decay.png"), width = 5, height = 6)
+ggsave(paste0(base_dir, "outputs/figures/2c.ROI_MT_decay.pdf"), width = 5, height = 4)
+ggsave(paste0(base_dir, "outputs/figures/2c.ROI_MT_decay.png"), width = 5, height = 4)
 
 
 # D: Relationship between early developmental MT decay and anatomical position ----------------------------
@@ -707,7 +707,7 @@ p_figS1b <- df_confint_roi_sup %>%
   ggplot(aes(x = reorder(str_wrap(system, 35), -slope), y = slope)) +
   geom_errorbar(aes(ymin = slope - standard_error, ymax = slope + standard_error)) +
   geom_point(aes(color = abs(slope)), size = 3) +
-  scale_color_gradient(low = "white", high = "salmon", limits = c(0, min(df_confint_roi_sup$slope) %>% )) +
+  scale_color_gradient(low = "white", high = "salmon", limits = c(0, min(df_confint_roi_sup$slope) %>% abs())) +
   ylim(c(-0.015, 0)) +
   labs(x = "", y = "PND 20 --> 63 slope (+/- standard error)",
        title = "Rate of early developmental MT decay in each brain system \n(no TBV correction)") +
