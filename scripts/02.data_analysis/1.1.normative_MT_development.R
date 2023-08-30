@@ -1,6 +1,6 @@
 
 ###
-### Run analysis and generate figures for Fig 1: Regional MT development in the developmental cohort
+### Run analysis and generate figures for Fig 2: Regional MT development in the developmental cohort
 ###
 
 # libraries ---------------------------------------------------------------
@@ -415,7 +415,7 @@ df_na_regs <- df_slices %>%
   filter(str_detect(region_of_interest, paste0(bad_reg_rois, collapse = "|"))) %>% 
   expand_grid(timepoint = unique(df_mt$timepoint))
 
-p_fig1a <- df_slices %>% 
+p_fig2a <- df_slices %>% 
   filter(!str_detect(region_of_interest, paste0(bad_reg_rois, collapse = "|"))) %>% 
   left_join(df_mt_mrc %>% 
               group_by(region_of_interest, roi_abbreviation, timepoint) %>% 
@@ -442,7 +442,7 @@ p_fig1a <- df_slices %>%
         legend.key.height = unit(0.25, "cm")
   )
 
-p_fig1a
+p_fig2a
 
 # SAVE
 ggsave(paste0(base_dir, "outputs/figures/2a.MT_brain_maps.pdf"), width = 5, height = 4)
@@ -450,31 +450,31 @@ ggsave(paste0(base_dir, "outputs/figures/2a.MT_brain_maps.png"), width = 5, heig
 
 # B: Overall MT decay ------------------------------------------------------------
 
-df_fig1b <- df_mt_mrc %>% 
+df_fig2b <- df_mt_mrc %>% 
   group_by(timepoint) %>% 
   mutate(median_feaure_resids = median(feature_resids),
          median_age = median(age)) %>% 
   filter(timepoint != 35)
 
-p_fig1b <- ggplot() +
+p_fig2b <- ggplot() +
   
-  geom_point(data = df_fig1b,
+  geom_point(data = df_fig2b,
              mapping = aes(x = age, y = feature_resids), 
              size = 2, shape = 1) +
   
   # late development
-  geom_point(data = df_fig1b %>% filter(timepoint == 300),
+  geom_point(data = df_fig2b %>% filter(timepoint == 300),
              mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
              size = 3, color = "gray") +
-  geom_line(data = df_fig1b %>% filter(timepoint %in% c(63, 300)),
+  geom_line(data = df_fig2b %>% filter(timepoint %in% c(63, 300)),
             mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
             linewidth = 2, lty = 2, color = "gray") +
   
   # early development
-  geom_point(data = df_fig1b %>% filter(timepoint %in% c(20, 63)),
+  geom_point(data = df_fig2b %>% filter(timepoint %in% c(20, 63)),
              mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
              size = 3, color = "salmon") +
-  geom_line(data = df_fig1b %>% filter(timepoint %in% c(20, 63)),
+  geom_line(data = df_fig2b %>% filter(timepoint %in% c(20, 63)),
             mapping = aes(x = median_age, y = median_feaure_resids, color = period), 
             linewidth = 2, lty = 2, color = "salmon") +
   
@@ -483,7 +483,7 @@ p_fig1b <- ggplot() +
        title = "MT across ROIs and subjects") +
   theme(legend.position = "none")
 
-p_fig1b
+p_fig2b
 
 # SAVE
 ggsave(paste0(base_dir, "outputs/figures/2b.MT_decay_overall.pdf"), width = 5, height = 4)
@@ -492,7 +492,7 @@ ggsave(paste0(base_dir, "outputs/figures/2b.MT_decay_overall.png"), width = 5, h
 # C: Gray matter ROI-specific MT decay in early development ------------------------------------------------------------
 
 # PLOT SLOPES AND ERRORS
-p_fig1c <- df_confint_roi %>% 
+p_fig2c <- df_confint_roi %>% 
   left_join(df_sys_to_roi) %>% 
   filter(region_of_interest %in% gray_matter_rois) %>% 
   group_by(system) %>% 
@@ -515,7 +515,7 @@ p_fig1c <- df_confint_roi %>%
         #axis.text.y = element_text(size = 11)
   )
 
-p_fig1c
+p_fig2c
 
 # SAVE
 ggsave(paste0(base_dir, "outputs/figures/2c.ROI_MT_decay.pdf"), width = 5, height = 6)
@@ -538,7 +538,7 @@ df_slices <- map_dfr(.x = 1:length(slices),
   dplyr::select(region_of_interest, side, geometry) %>% 
   distinct()
 
-p_fig1d_brain <- df_slices %>% 
+p_fig2d_brain <- df_slices %>% 
   left_join(df_confint_roi, 
             by = "region_of_interest") %>% 
   mutate(slope = ifelse(region_of_interest %in% white_matter_rois, NA, slope)) %>% 
@@ -563,7 +563,7 @@ p_fig1d_brain <- df_slices %>%
 labels <- c("x (left --> right)", "y (posterior --> anterior)", "z (inferior --> superior)")
 names(labels) <- c("x", "y", "z")
 
-p_fig1d_coords <- df_centroids %>% 
+p_fig2d_coords <- df_centroids %>% 
   pivot_longer(2:ncol(.), names_to = "dim", values_to = "coord") %>% 
   left_join(df_confint_sys, by = join_by(system)) %>%
   
@@ -579,7 +579,7 @@ p_fig1d_coords <- df_centroids %>%
        title = "System-level MT decay slope relative to anatomical position (RH)") +
   theme(legend.position = "none")
 
-p_fig1d_brain / p_fig1d_coords +
+p_fig2d_brain / p_fig2d_coords +
   plot_annotation(title = "Anatomical patterning of MT decay in gray matter regions")
 
 # SAVE
@@ -608,10 +608,10 @@ layout <- c(
   
 )
 
-p_fig1a +
-  p_fig1b + 
-  p_fig1c_slopes + (p_fig1c_pvals + plot_layout(tag_level = "new")) +
-  p_fig1d_brain + (p_fig1d_xyz + plot_layout(tag_level = "new")) +
+p_fig2a +
+  p_fig2b + 
+  p_fig2c_slopes + (p_fig2c_pvals + plot_layout(tag_level = "new")) +
+  p_fig2d_brain + (p_fig2d_xyz + plot_layout(tag_level = "new")) +
   
   plot_layout(design = layout) + 
   plot_annotation(title = "Regional MT development",
@@ -752,4 +752,4 @@ p_figS1c
 
 # SAVE
 ggsave(paste0(base_dir, "outputs/figures/S1c.WM_MT_decay.pdf"), width = 6, height = 4)
-ggsave(paste0(base_dir, "outputs/figures/S2c.WM_MT_decay.png"), width = 6, height = 4)
+ggsave(paste0(base_dir, "outputs/figures/S1c.WM_MT_decay.png"), width = 6, height = 4)
