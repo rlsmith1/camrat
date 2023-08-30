@@ -96,7 +96,6 @@ df_data <- df_data_tmp %>%
   distinct() %>% 
   arrange(study, subject, timepoint, metric, region_of_interest)
 
-
 # format & save -----------------------------------------------------------
 
 # LIST ROIS THAT DID NOT REGISTER WELL TO REMOVE FROM ANALYSIS

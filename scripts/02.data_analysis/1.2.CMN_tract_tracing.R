@@ -22,13 +22,13 @@ library(ggside)
 # set plot theme ----------------------------------------------------------
 
 theme_set(theme_light() +
-            theme(plot.title = element_text(size = 14),
-                  axis.title = element_text(size = 12),
-                  axis.text = element_text(size = 12),
-                  strip.text = element_text(size = 12, color = "black"),
+            theme(plot.title = element_text(size = 10),
+                  axis.title = element_text(size = 10),
+                  axis.text = element_text(size = 10),
+                  strip.text = element_text(size = 10, color = "black"),
                   strip.background = element_rect(fill = "white", color = "gray"),
-                  legend.title = element_text(size = 12),
-                  legend.text = element_text(size = 12)
+                  legend.title = element_text(size = 8),
+                  legend.text = element_text(size = 8)
                   #legend.key.width = unit(2, "cm")
             )
 )
@@ -381,6 +381,55 @@ p_fig3c
 # SAVE
 ggsave(paste0(base_dir, "outputs/figures/3c.tract-tracing_correlation.pdf"), width = 5, height = 4)
 ggsave(paste0(base_dir, "outputs/figures/3c.tract-tracing_correlation.png"), width = 5, height = 4)
+
+
+# S2a ---------------------------------------------------------------------
+
+p_figS2a <- df_mind_GM %>%
+  filter(timepoint == 300 & study == "MRC") %>% 
+  group_by(R1, R2) %>% 
+  summarise(weight = median(weight)) %>%  
+  
+  mutate(R1 = factor(R1, levels = roi_order),
+         R2 = factor(R2, levels = roi_order)) %>%
+  
+  # plot
+  ggplot(aes(x = R1, y = R2, fill = weight)) +
+  geom_tile() +
+  
+  # add module lines
+  geom_vline(xintercept = module_lines, color = "white", linewidth = 0.5) +
+  geom_hline(yintercept = module_lines, color = "white", linewidth = 0.5) +
+  
+  annotate(ymin = c(-Inf, module_lines),
+           ymax = c(module_lines, Inf),
+           xmin = length(roi_order) + 0.5, xmax = length(roi_order) + 2,
+           geom = "rect",
+           fill = module_colors) +
+  annotate(xmin = c(-Inf, module_lines),
+           xmax = c(module_lines, Inf),
+           ymin = length(roi_order) + 0.5, ymax = length(roi_order) + 2,
+           geom = "rect",
+           fill = module_colors) +
+  
+  labs(x = "", y = "", title = "Control adult (PND 300) median CMN") +
+  scale_fill_viridis(na.value = "white", limits = c(0, 1)) +
+  
+  # use ROI abbreviation instead of full name
+  scale_x_discrete(labels = df_roi_to_abbrev %>% pull(roi_abbreviation)) +
+  scale_y_discrete(labels = df_roi_to_abbrev %>% pull(roi_abbreviation)) +
+  
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 10),
+    legend.justification = "top",
+    legend.key.width = unit(0.5, "cm"),
+    legend.key.height = unit(2.0, "cm")
+  )
+
+p_figS2a
+
+# SAVE
+ggsave(paste0(base_dir, "outputs/figures/S2.CMN_with_labels.pdf"), width = 11, height = 10)
+ggsave(paste0(base_dir, "outputs/figures/S2.CMN_with_labels.png"), width = 11, height = 10)
 
 # S2a: alluvial plot to assess module stability across values of k -------------------------------------
 
