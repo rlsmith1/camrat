@@ -1,6 +1,6 @@
 
 ###
-###
+### Network characteristics of the control adult CMN
 ###
 
 # libraries ---------------------------------------------------------------
