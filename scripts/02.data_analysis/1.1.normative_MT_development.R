@@ -273,36 +273,6 @@ for (r in ROIs) {
 }
 df_confint_roi <- df_confint_roi %>% arrange(slope)
 
-# run t-test on the pairwise comparison of each ROI slope with each other slope
-# df_confint_roi_pvals <- expand_grid(
-#   R1 = ROIs,
-#   R2 = ROIs
-# ) %>% 
-#   filter(R1 != R2) %>% 
-#   
-#   mutate(
-#     p_val = map2(
-#       .x = R1,
-#       .y = R2,
-#       .f = ~  t.test2(
-#         
-#         m1 = df_confint_roi %>% filter(region_of_interest == .x) %>% pull(slope), 
-#         m2 = df_confint_roi %>% filter(region_of_interest == .y) %>% pull(slope),
-#         
-#         s1 = df_confint_roi %>% filter(region_of_interest == .x) %>% pull(standard_error),
-#         s2 = df_confint_roi %>% filter(region_of_interest == .y) %>% pull(standard_error),
-#         
-#         n1 = df_mt_mrc %>% ungroup %>% filter(region_of_interest == .x) %>% pull(subject) %>% unique %>% length,
-#         n2 = df_mt_mrc %>% ungroup %>% filter(region_of_interest == .y) %>% pull(subject) %>% unique %>% length
-#         
-#       ) %>% 
-#         .["p-value"]
-#     )
-#   ) %>% 
-#   unnest(cols = c(p_val)) %>% 
-#   mutate(p_adj = p.adjust(p_val, method = "BH")) %>% 
-#   arrange(p_val)
-
 # Run t-test comparisons at system level
 df_confint_sys <- df_confint_roi %>% 
   left_join(df_sys_to_roi) %>% 
@@ -753,3 +723,12 @@ p_figS1c
 # SAVE
 ggsave(paste0(base_dir, "outputs/figures/S1c.WM_MT_decay.pdf"), width = 6, height = 4)
 ggsave(paste0(base_dir, "outputs/figures/S1c.WM_MT_decay.png"), width = 6, height = 4)
+
+
+
+
+
+
+
+
+
