@@ -514,10 +514,11 @@ df_mt <- df_data %>%
                 mt) %>% 
   
   # average across hemispheres
-  group_by(subject, timepoint, region_of_interest) %>% 
-  mutate(mt = mean(mt)) %>% 
-  dplyr::select(-hemisphere) %>% 
-  distinct() %>% 
+  # group_by(subject, timepoint, region_of_interest) %>% 
+  # mutate(mt = mean(mt)) %>% 
+  # dplyr::select(-hemisphere) %>% 
+  # distinct() %>% 
+  mutate(region_of_interest_hemi = paste0(region_of_interest, sep = "_", hemisphere)) %>% 
   
   # change grouping to correct & normalize within study, ROI, and timepoint
   group_by(study, region_of_interest, timepoint) %>% 
@@ -527,34 +528,27 @@ df_mt <- df_data %>%
   mutate(
     
     model = case_when(
-      
       study == "MRC" & timepoint != 300 ~ "mt ~ tbv",
       study == "MRC" & timepoint == 300 ~  "mt ~ age + tbv",
       
       study == "GSK" & timepoint == 300 ~ "mt ~ sex + age + tbv",
       TRUE ~ "mt ~ sex + tbv" 
-      
     ),
-    
     data = map(
-      
       .x = data,
       .f = ~ .x %>% 
         mutate(feature_resids = lm(formula(model), data = .x)$residuals + mean(mt))
-      
     )
     
   ) %>% 
   
   # normalize and remove outliers (defined as z_score > 4)
   mutate(data = 
-           
            map(
              .x = data, 
              .f = ~ .x %>% 
                mutate(normalized_feature = (mt - mean(mt))/sd(mt))
            )
-         
   ) %>% 
   unnest(cols = c(data)) %>% 
   filter(abs(normalized_feature) <= 4) %>% 
@@ -663,9 +657,16 @@ df_behavior <- df_behavior_raw %>%
 df_mt_gsk <- df_mt %>% filter(study == "GSK")
 
 # BASELINE
-df_mt_pnd20 <- df_mt_gsk %>%
+df_mt_pnd20_SYS <- df_mt_gsk %>%
   filter(timepoint == 20 & region_of_interest %in% gray_matter_rois) %>%
   group_by(system) %>%
+  nest() %>%
+  f_run_lm(20) %>% 
+  filter(str_detect(term, "group"))
+
+df_mt_pnd20_ROI <- df_mt_gsk %>%
+  filter(timepoint == 20 & region_of_interest %in% gray_matter_rois) %>%
+  group_by(region_of_interest_hemi) %>%
   nest() %>%
   f_run_lm(20) %>% 
   filter(str_detect(term, "group"))
@@ -869,7 +870,7 @@ map(
   .f = ~ ggsave(paste0(base_dir, "outputs/figures/6b.case_control_MT_decay", .x), width = 7, height = 5)
 )
 
-# B2: Anatomical patterning of baseline MT and MT slope effect size  --------
+# A2B2: Anatomical patterning of baseline MT and MT slope effect size  --------
 
 labels <- c("x (medial --> lateral)", "y (posterior --> anterior)", "z (inferior --> superior)")
 names(labels) <- c("x", "y", "z")
@@ -961,11 +962,34 @@ map(
   .f = ~ ggsave(paste0(base_dir, "outputs/figures/6c.case_control_baseline_MRC_baseline", .x), width = 5, height = 4)
 )
 
-# D: Case-control baseline MT vs MRC slopes MT --------------------------
+# D: Case-control MT decay vs MRC slopes MT --------------------------
 
-model <- lm(slope ~ t_value + t_value2, data = df_baseline_slopes_comparison)
+# RELATE CASE-CONTROL DIFFERENCE IN MT SLOPE TO MRC MT DECAY
+df_baseline_slopes_comparison2 <- df_mt_degree_slopes %>% 
+  unnest(cols = c(data)) %>% 
+  ungroup %>% 
+  filter(phenotype == "mt" & period == "early" & study == "MRC" & region_of_interest %in% gray_matter_rois) %>% 
+  dplyr::select(system, region_of_interest, subject, slope) %>% 
+  distinct() %>% 
+  group_by(region_of_interest) %>%
+  summarise(slope = median(slope)) %>%
+  left_join(df_mt_gsk %>%
+              filter(timepoint %in% c(20, 63) & region_of_interest %in% gray_matter_rois) %>%
+              group_by(region_of_interest) %>%
+              nest() %>%
+              f_run_lme() %>% 
+              filter(term == "groupMS:age") %>% 
+              dplyr::select(region_of_interest, t_value, p_adj),
+            by = join_by(region_of_interest)
+  ) %>% 
+  arrange(t_value) %>% 
+  mutate(t_value2 = t_value^2,
+         t_value3 = t_value^3)
 
-df_baseline_slopes_comparison %>% 
+# PLOT
+model <- lm(slope ~ t_value + t_value2, data = df_baseline_slopes_comparison2)
+
+df_baseline_slopes_comparison2 %>% 
   mutate(sign = ifelse(t_value < 0, "negative", "positive"),
          formula = f_model_label(model, type = "quadratic"),
          hubs = ifelse(region_of_interest %in% hubs, 1, 0) %>% factor(),
@@ -974,11 +998,11 @@ df_baseline_slopes_comparison %>%
   
   ggplot(aes(x = t_value, y = slope)) +
   geom_point(aes(fill = t_value, color = sign, shape = hubs, size = hubs)) +
-  geom_smooth(method = "lm", formula = y ~ x + I(x^2), color = "black") +
-  geom_text(
-    x = -0.5, y = -0.004, color = "blue", size = 2.5, hjust = 0.5,
-    aes(label = formula), check_overlap = TRUE
-  ) +
+  # geom_smooth(method = "lm", formula = y ~ x + I(x^2), color = "black") +
+  # geom_text(
+  #   x = -0.5, y = -0.004, color = "blue", size = 2.5, hjust = 0.5,
+  #   aes(label = formula), check_overlap = TRUE
+  # ) +
   geom_text_repel(aes(label = label), size = 3) +
   geom_vline(aes(xintercept = 0)) +
   scale_fill_gradient2(high = "#B2182B", mid = "white", low = "#2166AC", guide = "none") +
@@ -986,7 +1010,7 @@ df_baseline_slopes_comparison %>%
   scale_shape_manual(values = c(21, 23)) +
   scale_size_manual(values = c(1, 3)) +
   labs(y = "Early developmental MT slope in developmental cohort \n(corrected for TBV)",
-       x = "RMS-control t-value at baseline",
+       x = "RMS-control slope t-value",
        title = "Relationship between group effect size and MT decay slope (at ROI level)") +
   coord_flip()
 

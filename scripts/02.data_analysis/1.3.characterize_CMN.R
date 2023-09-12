@@ -345,7 +345,40 @@ ggsave(paste0(base_dir, "outputs/figures/4b.hubs_ball-and-stick.pdf"), width = 1
 ggsave(paste0(base_dir, "outputs/figures/4b.hubs_ball-and-stick.png"), width = 10, height = 4)
 
 
-# C: relationship between degree and MT^2 ------------------------------------
+# C: Anatomical position by hubness -----------------------------------------------------------------------
+
+labels <- c("x (medial --> lateral)", "y (posterior --> anterior)", "z (inferior --> superior)")
+names(labels) <- c("x", "y", "z")
+
+df_centroids %>% 
+  pivot_longer(2:ncol(.), names_to = "dim", values_to = "coord") %>% 
+  left_join(df_hubs , 
+            by = join_by(region_of_interest)
+  ) %>% 
+  mutate(hub = ifelse(region_of_interest %in% hubs, 1, 0) %>% factor()) %>% 
+
+  ggplot(aes(x = coord, y = median_hub)) +
+  geom_point(aes(fill = median_hub, shape = hub, size = hub)) +
+  geom_smooth(method = "lm", color = "black", se = FALSE) +
+  stat_cor(color = "black", size = 3, label.y = -Inf, vjust = 0) +
+  #geom_text_repel(aes(label = system)) +
+  facet_grid(~ dim, scales = "free",
+             labeller = labeller(dim = labels)) +
+  scale_fill_viridis() +
+  scale_shape_manual(values = c(21, 23)) +
+  scale_size_manual(values = c(1, 3)) +
+  labs(x = "Coordinate position", y = "Effect size",
+       title = "Baseline degree and degree slope effect size relative to anatomical position (RH)") +
+  theme(legend.position = "none")
+
+# SAVE
+map(
+  .x = c(".pdf", ".png"),
+  .f = ~ ggsave(paste0(base_dir, "outputs/figures/4c.anatomical_positioning_of_hubs", .x), width = 6, height = 3)
+)
+
+
+# D: relationship between degree and MT^2 ------------------------------------
 
 # describe model parameters
 adj_r_sq <- round((parabolic_model %>% summary %>% .$adj.r.squared), 2)
