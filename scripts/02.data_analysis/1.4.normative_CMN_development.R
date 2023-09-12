@@ -502,3 +502,168 @@ df_mt_degree_slopes %>%
         #axis.text.y = element_text(size = 11)
   )
 
+
+# actual B: regional degree over time (maps -----------------------------------------
+
+df_degree_mrc <- df_degree %>% filter(study == "MRC" & region_of_interest %in% gray_matter_rois)
+
+slices <- list("sagittal" = 125, "coronal" = 150, "axial" = 115)
+df_slices <- map_dfr(.x = 1:length(slices),
+                     .f = ~ df_sigma_atlas %>%
+                       filter(region_of_interest != "striatum") %>% 
+                       filter(side == names(slices[.x]) & slice == slices[.x])
+                     
+) %>% 
+  dplyr::select(region_of_interest, side, geometry) %>% 
+  distinct()
+
+df_na_regs <- df_slices %>% 
+  filter(str_detect(region_of_interest, paste0(bad_reg_rois, collapse = "|"))) %>% 
+  expand_grid(timepoint = unique(df_mt$timepoint))
+
+df_slices %>% 
+  filter(!str_detect(region_of_interest, paste0(bad_reg_rois, collapse = "|"))) %>% 
+  left_join(df_degree_mrc %>% 
+              group_by(region_of_interest, timepoint) %>% 
+              summarise(feature_resids = median(feature_resids)), 
+            by = join_by(region_of_interest)) %>% 
+  arrange(region_of_interest != "corpus_callosum_and_associated_subcortical_white_matter") %>% 
+  bind_rows(df_na_regs, .) %>% 
+  filter(timepoint != 35) %>% 
+  
+  ggplot() +
+  geom_sf(aes(fill = feature_resids, color = feature_resids, geometry = geometry, group = -1), 
+          lwd = 0.5) +
+  scale_fill_viridis(na.value = "grey") +
+  scale_color_viridis(na.value = "grey") +
+  facet_grid(side ~ timepoint) +
+  labs(title = "Median degree map through development",
+       fill = "Degree \n(corrected for TBV)", color = "Degree \n(corrected for TBV)") +
+  theme_void() +
+  theme(strip.text.y = element_blank(),
+        strip.text.x = element_text(size = 14),
+        legend.position = "bottom",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        legend.key.width = unit(1, "cm"),
+        legend.key.height = unit(0.25, "cm")
+  )
+
+# SAVE
+map(
+  .x = c(".pdf", ".png"),
+  .f = ~ ggsave(paste0(base_dir, "outputs/figures/5b.degree_maps_development", .x), width = 5, height = 4)
+)
+
+
+# actual C: slopes --------------------------------------------------------
+
+load(paste0(base_dir, "objects/mt_degree_slopes.RDS")) # df_mt_degree_slopes
+
+df_mt_degree_slopes_SYS <- df_mt_degree_slopes %>% 
+  filter(phenotype == "degree" & period == "early" & region_of_interest %in% gray_matter_rois) %>% 
+  left_join(df_sys_to_roi) %>% 
+  group_by(system) %>% 
+  summarise(slope = median(slope),
+            standard_error = median(standard_error)
+  ) %>% 
+  mutate(system = str_replace(system, "_", " "),
+         system = str_replace(system, "_", "\n"),
+         sign = ifelse(slope < 0, "neg", "pos")
+  )
+
+df_mt_degree_slopes_SYS %>% 
+  ggplot(aes(x = reorder(system, -slope), y = slope)) +
+  geom_errorbar(aes(ymin = slope - standard_error, ymax = slope + standard_error)) +
+  geom_point(aes(fill = slope, color = sign), shape = 21, size = 3) +
+  geom_hline(aes(yintercept = 0), lty = 2, color = "black") +
+  scale_color_manual(values = c("#2166AC", "#B2182B")) +
+  scale_fill_gradient2(low = "#2166AC", mid ="white", high = "#B2182B") +
+  #ylim(c(-0.015, 0)) +
+  labs(x = "", y = "PND 20 --> 63 slope (+/- standard error)",
+       title = "Rate of early developmental degree change in \ngray matter brain systems") +
+  coord_flip() +
+  theme(legend.position = "none"#,
+        #axis.text.y = element_text(size = 11)
+  )
+
+# SAVE
+map(
+  .x = c(".pdf", ".png"),
+  .f = ~ ggsave(paste0(base_dir, "outputs/figures/5c.degree_early_development_slopes", .x), width = 5, height = 4)
+)
+
+# D: Relationship between early developmental degree slope and anatomical position ----------------------------
+
+# PLOT SLOPES ON BRAINS
+slices <- list("sagittal" = 125, 
+               "axial" = 115,
+               "coronal" = 150
+)
+df_slices <- map_dfr(.x = 1:length(slices),
+                     .f = ~ df_sigma_atlas %>%
+                       filter(region_of_interest != "striatum") %>% 
+                       filter(side == names(slices[.x]) & slice == slices[.x])
+                     
+) %>% 
+  dplyr::select(region_of_interest, side, geometry) %>% 
+  distinct()
+
+p_fig5d_brain <- df_slices %>% 
+  left_join( df_mt_degree_slopes %>% 
+               filter(phenotype == "degree" & period == "early" & region_of_interest %in% gray_matter_rois), 
+            by = "region_of_interest") %>% 
+  mutate(slope = ifelse(region_of_interest %in% white_matter_rois, NA, slope)) %>% 
+  arrange(!is.na(slope)) %>% 
+  
+  ggplot() +
+  geom_sf(aes(color = slope, fill = slope, geometry = geometry, group = -1)) +
+  scale_fill_gradient2(low = "#2166AC", mid ="white", high = "#B2182B") +
+  scale_color_gradient2(low = "#2166AC", mid ="white", high = "#B2182B") +
+  facet_wrap(vars(side), nrow = 1) +
+  #labs(title = "Rate of early developmental degree change across regions") +
+  theme_void() +
+  theme(strip.text = element_blank(),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 8),
+        legend.key.width = unit(1.5, "cm"),
+        legend.key.height = unit(0.25, "cm"),
+        legend.position = "bottom"
+  )
+
+# SLOPE VS X, Y, Z COORDS
+labels <- c("x (left --> right)", "y (posterior --> anterior)", "z (inferior --> superior)")
+names(labels) <- c("x", "y", "z")
+
+p_fig5d_coords <- df_centroids %>% 
+  pivot_longer(2:ncol(.), names_to = "dim", values_to = "coord") %>% 
+  left_join(df_mt_degree_slopes %>% 
+              filter(phenotype == "degree" & period == "early" & region_of_interest %in% gray_matter_rois), by = join_by(region_of_interest)
+            ) %>%
+  mutate(sign = ifelse(slope < 0, "neg", "pos")) %>% 
+  
+  ggplot(aes(x = coord, y = slope)) +
+  geom_point(aes(fill = slope, color = sign), shape = 21, size = 2) +
+  scale_color_manual(values = c("#2166AC", "#B2182B")) +
+  scale_fill_gradient2(low = "#2166AC", mid ="white", high = "#B2182B") +
+  geom_smooth(method = "lm", color = "black", se = FALSE, lty = 2) +
+  stat_cor(color = "black", size = 3, label.y = -0.13) +
+  #geom_text_repel(aes(label = system)) +
+  facet_wrap(vars(dim), scales = "free_x", labeller = as_labeller(labels)) +
+  labs(x = "Coordinate position", y = "MT decay slope",
+       title = "ROI-level degree slope relative to anatomical position (RH)") +
+  theme(legend.position = "none")
+
+p_fig5d_brain / p_fig5d_coords +
+  plot_annotation(title = "Anatomical patterning of degree change in gray matter regions")
+
+# SAVE
+map(
+  .x = c(".pdf", ".png"),
+  .f = ~ ggsave(paste0(base_dir, "outputs/figures/5d.anat_degree_slope", .x), width = 6, height = 4)
+)
+
+
+
+
+
